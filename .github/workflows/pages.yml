@@ -10,7 +10,8 @@ on:
       - "requirements.txt"
       - ".github/workflows/pages.yml"
   schedule:
-    - cron: "*/10 7-10 * * *"
+    # 16:00~21:00 KST (7:00~12:00 UTC), 5분 간격 갱신
+    - cron: "*/5 7-12 * * *"
   workflow_dispatch:
 
 permissions:

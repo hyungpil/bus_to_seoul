@@ -23,7 +23,7 @@ py -m unittest discover tests # 추적 로직 테스트
 
 GitHub Pages에서 서버를 실행할 수 없으므로, GitHub Actions가 다음 역할을 수행합니다.
 
-- 16:00~19:00 KST에 약 10분 간격으로 네이버 실시간 정보를 조회
+- 16:00~21:00 KST에 약 5분 간격으로 네이버 실시간 정보를 조회
 - SQLite 데이터를 갱신
 - 실시간 정보와 통계를 정적 JSON으로 내보내기
 - 변경된 데이터와 화면을 GitHub Pages에 배포

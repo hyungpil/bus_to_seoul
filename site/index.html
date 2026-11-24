@@ -14,6 +14,9 @@
     main { max-width:960px; margin:0 auto; padding:20px 16px 48px; }
     h1 { font-size:20px; margin:0 0 4px; }
     h2 { font-size:16px; margin:28px 0 10px; }
+    .title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    .refresh-btn { border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--fg); cursor:pointer; padding:8px 12px; white-space:nowrap; }
+    .refresh-btn:disabled { opacity:.6; cursor:wait; }
     .sub { color:var(--muted); font-size:13px; margin-bottom:20px; }
     .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
     .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
@@ -32,22 +35,76 @@
     .scroll { overflow-x:auto; }
     .err { color:var(--red); font-size:13px; }
     .section-label { font-size:12px; color:var(--muted); margin:10px 0 2px; text-transform:uppercase; letter-spacing:.04em; }
+    .filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin-bottom:12px; }
+    .filter { display:flex; flex-direction:column; gap:4px; color:var(--muted); font-size:12px; }
+    .filter select { width:100%; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--fg); padding:7px 8px; font-size:13px; }
+    .route-6401 { background:rgba(37,99,235,.10); }
+    .route-8507 { background:rgba(229,72,77,.10); }
+    .route-6401 td:first-child { box-shadow:inset 4px 0 #2563eb; }
+    .route-8507 td:first-child { box-shadow:inset 4px 0 #e5484d; }
+    .route-pill-6401 { background:#2563eb; color:#fff; border-radius:999px; padding:2px 7px; }
+    .route-pill-8507 { background:#e5484d; color:#fff; border-radius:999px; padding:2px 7px; }
   </style>
 </head>
 <body>
 <main>
-  <h1>KTX광명역5번출구 → 서울대입구역2번출구</h1>
+  <div class="title-row">
+    <h1>KTX광명역5번출구 → 서울대입구역2번출구</h1>
+    <button class="refresh-btn" id="refreshBtn" type="button" aria-label="페이지 새로고침">새로고침</button>
+  </div>
   <div class="sub" id="sub">백엔드 연결 확인 중…</div>
   <div id="errors"></div>
   <div class="grid" id="routes"></div>
   <h2>요일·시간대별 평균 소요시간 (분)</h2>
   <div class="card scroll" id="stats"><div class="empty">데이터를 불러오는 중입니다.</div></div>
   <h2>최근 광명역 통과 기록</h2>
-  <div class="card scroll" id="recent"></div>
+  <div class="card scroll">
+    <div class="filters" id="recentFilters">
+      <label class="filter">날짜<select id="dateFilter"><option value="">전체</option></select></label>
+      <label class="filter">요일<select id="weekdayFilter"><option value="">전체</option></select></label>
+      <label class="filter">노선<select id="routeFilter"><option value="">전체</option></select></label>
+      <label class="filter">광명역 출발 시간대<select id="originHourFilter"><option value="">전체</option></select></label>
+      <label class="filter">서울대입구역 도착 시간대<select id="destHourFilter"><option value="">전체</option></select></label>
+    </div>
+    <div id="recent"></div>
+  </div>
 </main>
 <script>
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const DATA_BASE="./data";
+let recentRows=[];
+const hourOf=value=>value ? Number(String(value).slice(11,13)) : null;
+const setOptions=(select,values,formatter=v=>`${v}`)=>{
+ const current=select.value;
+ select.innerHTML=`<option value="">전체</option>${values.map(v=>`<option value="${esc(v)}">${esc(formatter(v))}</option>`).join("")}`;
+ select.value=values.includes(current)?current:"";
+};
+function renderRecent(){
+ const date=document.getElementById("dateFilter").value;
+ const weekday=document.getElementById("weekdayFilter").value;
+ const route=document.getElementById("routeFilter").value;
+ const originHour=document.getElementById("originHourFilter").value;
+ const destHour=document.getElementById("destHourFilter").value;
+ const rows=recentRows.filter(r=>
+  (!date||r.service_date===date)&&
+  (!weekday||r.weekday_name===weekday)&&
+  (!route||r.route_name===route)&&
+  (!originHour||hourOf(r.a_arrival)===Number(originHour))&&
+  (!destHour||hourOf(r.b_arrival)===Number(destHour))
+ );
+ document.getElementById("recent").innerHTML=rows.length
+  ? `<table><tr><th>날짜</th><th>요일</th><th>노선</th><th>차량</th><th>광명역</th><th>서울대입구역</th><th>소요(분)</th><th>상태</th></tr>${rows.map(r=>`<tr class="route-${esc(r.route_name)}"><td>${esc(r.service_date)}</td><td>${esc(r.weekday_name)}</td><td><span class="route-pill-${esc(r.route_name)}">${esc(r.route_name)}</span></td><td>${esc(r.plate_no)}</td><td>${esc((r.a_arrival||"").slice(11,16))}</td><td>${esc((r.b_arrival||"").slice(11,16))}</td><td>${esc(r.travel_min??"")}</td><td>${esc(r.stage)}${r.stage==="done"&&!r.accurate?"*":""}</td></tr>`).join("")}</table>`
+  : `<div class="empty">선택한 조건의 기록이 없습니다.</div>`;
+}
+function prepareRecentFilters(rows){
+ recentRows=rows;
+ setOptions(document.getElementById("dateFilter"),[...new Set(rows.map(r=>r.service_date))].sort().reverse());
+ setOptions(document.getElementById("weekdayFilter"),[...new Set(rows.map(r=>r.weekday_name))].filter(Boolean));
+ setOptions(document.getElementById("routeFilter"),[...new Set(rows.map(r=>r.route_name))].filter(Boolean));
+ setOptions(document.getElementById("originHourFilter"),[...new Set(rows.map(r=>hourOf(r.a_arrival)).filter(v=>v!=null))].sort((a,b)=>a-b),v=>`${v}시`);
+ setOptions(document.getElementById("destHourFilter"),[...new Set(rows.map(r=>hourOf(r.b_arrival)).filter(v=>v!=null))].sort((a,b)=>a-b),v=>`${v}시`);
+ renderRecent();
+}
 function busHtml(b){
  const dest=b.eta_dest?`서울대입구역2번출구 예상 <b>${esc(b.eta_dest)}</b> <span class="meta">· ${esc(b.eta_dest_basis)}</span>`:`<span class="meta">서울대입구역 예상: 과거 데이터 없음</span>`;
  return `<div class="bus"><div><span class="eta">${esc(b.eta_origin)}</span><span class="min">${esc(b.min_to_origin)}분 후</span></div><div class="meta">${esc(b.plate_no)} · ${esc(b.stops_to_origin)}정거장 전 · 잔여좌석 ${esc(b.seats??"-")} · ${esc(b.congestion??"")}</div><div class="dest">${dest}</div></div>`;
@@ -57,7 +114,7 @@ function trackHtml(t){
 }
 async function loadLive(){
  try{
-  const d=await(await fetch(`${DATA_BASE}/live.json`,{cache:"no-store"})).json();
+  const d=await(await fetch(`${DATA_BASE}/live.json?t=${Date.now()}`,{cache:"no-store"})).json();
   sub.textContent=`마지막 갱신 ${d.now} · GitHub Actions 자동 갱신 · 네이버 지도 실시간 정보`;
   errors.innerHTML=(d.errors||[]).map(e=>`<div class="err">${esc(e)}</div>`).join("");
   routes.innerHTML=d.routes.map(r=>`<div class="card"><div class="route"><span class="badge">${esc(r.route_name)}</span><span class="meta">직행좌석</span></div><div class="section-label">광명역5번출구 도착 예정</div>${r.approaching.length?r.approaching.map(busHtml).join(""):`<div class="empty">도착 정보 없음</div>`}${r.tracking.length?`<div class="section-label">광명역 통과 후 추적 중</div>`+r.tracking.map(trackHtml).join(""):""}</div>`).join("");
@@ -68,7 +125,7 @@ async function loadLive(){
 }
 async function loadStats(){
  try{
-  const d=await(await fetch(`${DATA_BASE}/stats.json`,{cache:"no-store"})).json();
+  const d=await(await fetch(`${DATA_BASE}/stats.json?t=${Date.now()}`,{cache:"no-store"})).json();
   const days=["월","화","수","목","금","토","일"];
   const routes=[...new Set(d.travel.map(r=>r.route_name))];
   if(routes.length){
@@ -78,13 +135,25 @@ async function loadStats(){
     return `<div class="route"><span class="badge">${esc(rn)}</span></div><table><tr><th>시간대</th>${days.map(x=>`<th>${x}</th>`).join("")}</tr>${hours.map(h=>`<tr><th>${h}시</th>${days.map((_,w)=>`<td>${cell(w,h)}</td>`).join("")}</tr>`).join("")}</table>`;
    }).join("");
   }else stats.innerHTML=`<div class="empty">아직 수집된 완료 운행이 없습니다.</div>`;
-  recent.innerHTML=d.recent.length?`<table><tr><th>날짜</th><th>요일</th><th>노선</th><th>차량</th><th>광명역</th><th>서울대입구역</th><th>소요(분)</th><th>상태</th></tr>${d.recent.map(r=>`<tr><td>${esc(r.service_date)}</td><td>${esc(r.weekday_name)}</td><td>${esc(r.route_name)}</td><td>${esc(r.plate_no)}</td><td>${esc((r.a_arrival||"").slice(11,16))}</td><td>${esc((r.b_arrival||"").slice(11,16))}</td><td>${esc(r.travel_min??"")}</td><td>${esc(r.stage)}</td></tr>`).join("")}</table>`:`<div class="empty">기록 없음</div>`;
+  prepareRecentFilters(d.recent||[]);
  }catch(e){
   stats.innerHTML=`<div class="empty">통계를 불러올 수 없습니다.</div>`;
  }
 }
+async function refreshAll(){
+ const button=document.getElementById("refreshBtn");
+ button.disabled=true;
+ button.textContent="갱신 중…";
+ await Promise.allSettled([loadLive(),loadStats()]);
+ button.disabled=false;
+ button.textContent="새로고침";
+}
+["dateFilter","weekdayFilter","routeFilter","originHourFilter","destHourFilter"].forEach(id=>{
+ document.getElementById(id).addEventListener("change",renderRecent);
+});
+document.getElementById("refreshBtn").addEventListener("click",refreshAll);
 loadLive();loadStats();
-setInterval(loadLive,30000);setInterval(loadStats,120000);
+setInterval(loadLive,60000);setInterval(loadStats,60000);
 </script>
 </body>
 </html>

@@ -17,7 +17,7 @@ from .service import live_status, stats
 
 log = logging.getLogger(__name__)
 STATIC = Path(__file__).parent / "static" / "index.html"
-CACHE_SEC = 20
+CACHE_SEC = 10
 
 _client = NaverBusClient()
 _cache = {"t": 0.0, "data": None}
