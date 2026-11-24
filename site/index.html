@@ -3,13 +3,88 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>광명역 → 서울대입구역 버스 모니터</title>
+  <title>광명역 → 서울대입구역 버스</title>
+  <style>
+    :root { --bg:#f6f7f9; --card:#fff; --fg:#1b1f24; --muted:#6b7280; --line:#e5e7eb; --red:#e5484d; --accent:#2563eb; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#111317; --card:#1b1e24; --fg:#e8eaed; --muted:#9aa0a6; --line:#2c3038; --red:#ff6369; --accent:#6ea8fe; }
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 -apple-system,"Segoe UI","Malgun Gothic",sans-serif; }
+    main { max-width:960px; margin:0 auto; padding:20px 16px 48px; }
+    h1 { font-size:20px; margin:0 0 4px; }
+    h2 { font-size:16px; margin:28px 0 10px; }
+    .sub { color:var(--muted); font-size:13px; margin-bottom:20px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+    .route { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    .badge { background:var(--red); color:#fff; font-weight:700; border-radius:6px; padding:2px 8px; }
+    .bus { border-top:1px solid var(--line); padding:10px 0; }
+    .bus:first-of-type { border-top:0; }
+    .eta { font-size:24px; font-weight:700; }
+    .min { color:var(--accent); font-weight:600; margin-left:6px; }
+    .meta { color:var(--muted); font-size:13px; }
+    .dest { margin-top:4px; font-size:14px; }
+    .empty { color:var(--muted); padding:8px 0; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th,td { border-bottom:1px solid var(--line); padding:6px 4px; text-align:center; }
+    th { color:var(--muted); font-weight:600; }
+    .scroll { overflow-x:auto; }
+    .err { color:var(--red); font-size:13px; }
+    .section-label { font-size:12px; color:var(--muted); margin:10px 0 2px; text-transform:uppercase; letter-spacing:.04em; }
+  </style>
 </head>
 <body>
-  <h1>KTX광명역 → 서울대입구역 버스 모니터</h1>
-  <p>8507·6401 버스 추적 프로젝트입니다.</p>
-  <p>이 페이지는 GitHub Pages 정적 웹페이지로, 실시간 버스 정보나 로컬 SQLite 통계는 제공하지 않습니다.</p>
-  <p><a href="https://github.com/hyungpil/bus_to_seoul">저장소 보기</a></p>
-  <p><a href="https://github.com/hyungpil/bus_to_seoul/blob/main/README.md">로컬 실행 방법</a></p>
+<main>
+  <h1>KTX광명역5번출구 → 서울대입구역2번출구</h1>
+  <div class="sub" id="sub">백엔드 연결 확인 중…</div>
+  <div id="errors"></div>
+  <div class="grid" id="routes"></div>
+  <h2>요일·시간대별 평균 소요시간 (분)</h2>
+  <div class="card scroll" id="stats"><div class="empty">데이터를 불러오는 중입니다.</div></div>
+  <h2>최근 광명역 통과 기록</h2>
+  <div class="card scroll" id="recent"></div>
+</main>
+<script>
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const DATA_BASE="./data";
+function busHtml(b){
+ const dest=b.eta_dest?`서울대입구역2번출구 예상 <b>${esc(b.eta_dest)}</b> <span class="meta">· ${esc(b.eta_dest_basis)}</span>`:`<span class="meta">서울대입구역 예상: 과거 데이터 없음</span>`;
+ return `<div class="bus"><div><span class="eta">${esc(b.eta_origin)}</span><span class="min">${esc(b.min_to_origin)}분 후</span></div><div class="meta">${esc(b.plate_no)} · ${esc(b.stops_to_origin)}정거장 전 · 잔여좌석 ${esc(b.seats??"-")} · ${esc(b.congestion??"")}</div><div class="dest">${dest}</div></div>`;
+}
+function trackHtml(t){
+ return `<div class="bus"><div class="meta">${esc(t.plate_no)} · 광명역 ${esc(t.passed_origin)} 통과</div><div class="dest">서울대입구역2번출구 ${t.eta_dest?`<b>${esc(t.eta_dest)}</b> 도착 예정 (${esc(t.source)}${t.stops_to_dest!=null?`, ${esc(t.stops_to_dest)}정거장 전`:""})`:"추적 중"}</div></div>`;
+}
+async function loadLive(){
+ try{
+  const d=await(await fetch(`${DATA_BASE}/live.json`,{cache:"no-store"})).json();
+  sub.textContent=`마지막 갱신 ${d.now} · GitHub Actions 자동 갱신 · 네이버 지도 실시간 정보`;
+  errors.innerHTML=(d.errors||[]).map(e=>`<div class="err">${esc(e)}</div>`).join("");
+  routes.innerHTML=d.routes.map(r=>`<div class="card"><div class="route"><span class="badge">${esc(r.route_name)}</span><span class="meta">직행좌석</span></div><div class="section-label">광명역5번출구 도착 예정</div>${r.approaching.length?r.approaching.map(busHtml).join(""):`<div class="empty">도착 정보 없음</div>`}${r.tracking.length?`<div class="section-label">광명역 통과 후 추적 중</div>`+r.tracking.map(trackHtml).join(""):""}</div>`).join("");
+ }catch(e){
+  sub.textContent="최신 데이터를 불러오지 못했습니다.";
+  errors.innerHTML=`<div class="err">GitHub Actions가 데이터를 생성하지 않았거나, 배포가 아직 완료되지 않았습니다.</div>`;
+ }
+}
+async function loadStats(){
+ try{
+  const d=await(await fetch(`${DATA_BASE}/stats.json`,{cache:"no-store"})).json();
+  const days=["월","화","수","목","금","토","일"];
+  const routes=[...new Set(d.travel.map(r=>r.route_name))];
+  if(routes.length){
+   const hours=[...new Set(d.travel.map(r=>r.hour))].sort((a,b)=>a-b);
+   stats.innerHTML=routes.map(rn=>{
+    const cell=(w,h)=>{const x=d.travel.find(r=>r.route_name===rn&&r.weekday===w&&r.hour===h);return x?`${x.avg_min}<div class="meta">${x.min_min}~${x.max_min} · n${x.trips}</div>`:"-";}
+    return `<div class="route"><span class="badge">${esc(rn)}</span></div><table><tr><th>시간대</th>${days.map(x=>`<th>${x}</th>`).join("")}</tr>${hours.map(h=>`<tr><th>${h}시</th>${days.map((_,w)=>`<td>${cell(w,h)}</td>`).join("")}</tr>`).join("")}</table>`;
+   }).join("");
+  }else stats.innerHTML=`<div class="empty">아직 수집된 완료 운행이 없습니다.</div>`;
+  recent.innerHTML=d.recent.length?`<table><tr><th>날짜</th><th>요일</th><th>노선</th><th>차량</th><th>광명역</th><th>서울대입구역</th><th>소요(분)</th><th>상태</th></tr>${d.recent.map(r=>`<tr><td>${esc(r.service_date)}</td><td>${esc(r.weekday_name)}</td><td>${esc(r.route_name)}</td><td>${esc(r.plate_no)}</td><td>${esc((r.a_arrival||"").slice(11,16))}</td><td>${esc((r.b_arrival||"").slice(11,16))}</td><td>${esc(r.travel_min??"")}</td><td>${esc(r.stage)}</td></tr>`).join("")}</table>`:`<div class="empty">기록 없음</div>`;
+ }catch(e){
+  stats.innerHTML=`<div class="empty">통계를 불러올 수 없습니다.</div>`;
+ }
+}
+loadLive();loadStats();
+setInterval(loadLive,30000);setInterval(loadStats,120000);
+</script>
 </body>
 </html>

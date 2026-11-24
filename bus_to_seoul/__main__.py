@@ -129,6 +129,7 @@ def cmd_check(args):
 def main():
     p = argparse.ArgumentParser(prog="bus_to_seoul")
     sub = p.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("export-static")
     c = sub.add_parser("collect")
     c.add_argument("--force", action="store_true", help="수집 시간대(16~19시) 무시")
     c.add_argument("--once", action="store_true", help="1회만 조회")
@@ -144,7 +145,10 @@ def main():
     k.add_argument("--days", type=int, default=7)
     args = p.parse_args()
 
-    if args.cmd == "collect":
+    if args.cmd == "export-static":
+        from .export_static import export
+        export()
+    elif args.cmd == "collect":
         setup_logging("collector")
         from .collector import run
         run(force=args.force, once=args.once, duration_min=args.minutes)

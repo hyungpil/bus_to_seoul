@@ -5,11 +5,16 @@ on:
     branches: [main]
     paths:
       - "site/**"
+      - "data/bus.db"
+      - "bus_to_seoul/**"
+      - "requirements.txt"
       - ".github/workflows/pages.yml"
+  schedule:
+    - cron: "*/10 7-10 * * *"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -26,6 +31,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Refresh live data and SQLite
+        env:
+          BUS_DB: ${{ github.workspace }}/data/bus.db
+        run: |
+          python -m bus_to_seoul collect --once
+          python -m bus_to_seoul export-static
+      - name: Commit refreshed data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/bus.db site/data
+          git diff --quiet --cached || git commit -m "Refresh bus data"
+          git push
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload site artifact

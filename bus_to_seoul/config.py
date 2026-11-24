@@ -46,5 +46,5 @@ ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = Path(os.environ.get("BUS_DB") or ROOT / "data" / "bus.db")  # 테스트 시 BUS_DB로 분리
 LOG_DIR = ROOT / "logs"
 
-WEB_HOST = "127.0.0.1"
-WEB_PORT = 8507
+WEB_HOST = os.environ.get("BUS_HOST", "127.0.0.1")
+WEB_PORT = int(os.environ.get("PORT") or os.environ.get("BUS_PORT", "8507"))

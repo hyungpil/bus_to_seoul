@@ -3,12 +3,15 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
 import time
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from . import db
+from .config import KST
 from .naver import NaverBusClient
 from .service import live_status, stats
 
@@ -38,6 +41,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Cache-Control", "no-store")
+        cors_origin = os.environ.get("BUS_CORS_ORIGIN", "*")
+        self.send_header("Access-Control-Allow-Origin", cors_origin)
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(body)
 
@@ -49,6 +55,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path in ("/", "/index.html"):
                 self._send(200, STATIC.read_bytes(), "text/html; charset=utf-8")
+            elif path == "/healthz":
+                self._send(200, b"ok", "text/plain; charset=utf-8")
+            elif path == "/api/health":
+                self._json({"status": "ok", "now": db.fmt(datetime.now(KST))})
             elif path == "/api/live":
                 self._json(cached_live())
             elif path == "/api/stats":
@@ -62,6 +72,14 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             log.exception("request failed")
             self._send(500, json.dumps({"error": str(e)}).encode(), "application/json")
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        cors_origin = os.environ.get("BUS_CORS_ORIGIN", "*")
+        self.send_header("Access-Control-Allow-Origin", cors_origin)
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
 
     def log_message(self, fmt, *args):
         log.debug(fmt, *args)

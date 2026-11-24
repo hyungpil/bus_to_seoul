@@ -49,6 +49,7 @@
 </main>
 <script>
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const API_BASE = (window.BUS_API_URL || "").replace(/\/$/, "");
 
 function busHtml(b) {
   const dest = b.eta_dest
@@ -66,7 +67,7 @@ function trackHtml(t) {
 
 async function loadLive() {
   try {
-    const d = await (await fetch("/api/live")).json();
+    const d = await (await fetch(`${API_BASE}/api/live`)).json();
     document.getElementById("sub").textContent = `기준 ${d.now} · 30초마다 갱신 · 네이버 지도 실시간 정보`;
     document.getElementById("errors").innerHTML = (d.errors||[]).map(e => `<div class="err">${esc(e)}</div>`).join("");
     document.getElementById("routes").innerHTML = d.routes.map(r => `
@@ -82,7 +83,7 @@ async function loadLive() {
 }
 
 async function loadStats() {
-  const d = await (await fetch("/api/stats")).json();
+  const d = await (await fetch(`${API_BASE}/api/stats`)).json();
   const days = ["월","화","수","목","금","토","일"];
   const routes = [...new Set(d.travel.map(r => r.route_name))];
   if (routes.length) {

@@ -19,6 +19,17 @@ py -m unittest discover tests # 추적 로직 테스트
 
 매일 자동 수집: `register_task.ps1` 실행 (매일 15:55 작업 스케줄러 등록).
 
+## 웹 배포
+
+GitHub Pages에서 서버를 실행할 수 없으므로, GitHub Actions가 다음 역할을 수행합니다.
+
+- 16:00~19:00 KST에 약 10분 간격으로 네이버 실시간 정보를 조회
+- SQLite 데이터를 갱신
+- 실시간 정보와 통계를 정적 JSON으로 내보내기
+- 변경된 데이터와 화면을 GitHub Pages에 배포
+
+수동 갱신 및 배포는 GitHub 저장소의 **Actions → Deploy GitHub Pages → Run workflow**에서 실행할 수 있습니다.
+
 ## 데이터 출처 (네이버 지도 내부 API)
 
 | 용도 | 엔드포인트 |
