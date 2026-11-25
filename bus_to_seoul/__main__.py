@@ -10,14 +10,24 @@ from . import db
 from .config import DB_PATH, KST, LOG_DIR
 
 
+class KSTFormatter(logging.Formatter):
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.fromtimestamp(record.created, tz=KST)
+        if datefmt:
+            return dt.strftime(datefmt)
+        return dt.strftime("%Y-%m-%d %H:%M:%S") + f",{record.msecs:03.0f}"
+
+
 def setup_logging(name: str):
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     handlers = [logging.FileHandler(LOG_DIR / f"{name}.log", encoding="utf-8")]
     if sys.stdout is not None:
         handlers.append(logging.StreamHandler(sys.stdout))
+    formatter = KSTFormatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+    for handler in handlers:
+        handler.setFormatter(formatter)
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
         handlers=handlers,
     )
 
