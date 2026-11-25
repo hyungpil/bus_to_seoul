@@ -83,6 +83,13 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
         continue-on-error: true
+        with:
+          timeout: 600000
+        env:
+          WAIT_FOR_ARTIFACT_SECONDS: 30
+      - name: Wait for GitHub Pages artifact
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 30
       - name: Retry GitHub Pages deployment
         if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
