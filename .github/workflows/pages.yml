@@ -8,8 +8,8 @@ on:
       - "requirements.txt"
       - ".github/workflows/pages.yml"
   schedule:
-    # 한국 시간 10~23시 사이에 5분마다 한 번 수집하고 즉시 Pages에 배포한다.
-    - cron: "*/5 1-14 * * *"
+    # 한국 시간 10~23시 사이에 매분 수집하고 즉시 Pages에 배포한다.
+    - cron: "* 1-14 * * *"
   workflow_dispatch:
 
 permissions:
