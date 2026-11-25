@@ -7,9 +7,8 @@ on:
       - "bus_to_seoul/**"
       - "requirements.txt"
       - ".github/workflows/pages.yml"
-  schedule:
-    # 워크플로우는 매 5분 실행되며, 수집기는 한국 시간 10~24시에만 실제 조회한다.
-    - cron: "*/5 * * * *"
+  repository_dispatch:
+    types: [collect-bus-data]
   workflow_dispatch:
 
 permissions:

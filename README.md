@@ -6,7 +6,7 @@ GitHub Actions와 GitHub Pages로 운영되는 KTX광명역5번출구 → 서울
 
 ## 운영 방식
 
-- GitHub Actions가 한국 시간 10~23시 사이 매 5분마다 한 번 실행됩니다.
+- 외부 cron이 매 5분마다 GitHub Actions를 호출합니다. GitHub schedule 트리거는 사용하지 않습니다.
 - 각 실행에서 `python -m bus_to_seoul collect`를 단회 실행합니다.
 - 수집 시간은 한국 시간 기준 10:00~24:00이며, 그 시간에 광명역 통과 후보를 새로 기록합니다.
 - 이미 광명역을 지난 버스는 최대 150분까지 추적합니다.
@@ -46,6 +46,17 @@ GitHub Actions가 다음 순서로 정적 사이트를 배포합니다.
 
 수동 실행은 GitHub 저장소의 Actions에서 `Deploy GitHub Pages` 워크플로우의 `Run workflow`를 사용합니다.
 
+## 외부 cron 설정
+
+Cron 서비스는 5분마다 다음 GitHub API를 호출합니다.
+
+- URL: `https://api.github.com/repos/hyungpil/bus_to_seoul/dispatches`
+- HTTP method: `POST`
+- Headers: `Accept: application/vnd.github+json`, `Authorization: Bearer <GitHub PAT>`
+- Body: `{"event_type":"collect-bus-data"}`
+
+PAT에는 이 저장소에 대한 Actions 실행 권한이 필요하며, cron 서비스의 비밀 값으로 저장합니다.
+
 ## 데이터 출처
 
 네이버 지도 내부 공개 전송 대중교통 API의 실시간 도착정보를 사용합니다.
@@ -56,4 +67,4 @@ GitHub Actions가 다음 순서로 정적 사이트를 배포합니다.
 | 도착 정류장 | 서울대입구역2번출구 |
 | 대상 노선 | 8507, 6401 |
 | 수집 시간 | 매일 10:00~24:00 |
-| GitHub Actions 주기 | 매 5분 |
+| 외부 cron 주기 | 매 5분 |
