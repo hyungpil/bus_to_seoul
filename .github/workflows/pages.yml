@@ -10,7 +10,7 @@ on:
       - "requirements.txt"
       - ".github/workflows/pages.yml"
   schedule:
-    # GitHub Actions가 24시간 내내 1분 간격으로 단회 수집 및 정적 사이트 갱신
+    # GitHub Actions가 24시간 내내 1분 간격으로 실시간 데이터를 수집하고 Pages를 갱신
     - cron: "* * * * *"
   workflow_dispatch:
 
