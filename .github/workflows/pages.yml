@@ -52,16 +52,19 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p /tmp/bus-refresh/site/data
+          mkdir -p /tmp/bus-refresh/logs
           cp data/bus.db /tmp/bus-refresh/bus.db
           cp site/data/live.json /tmp/bus-refresh/site/data/live.json
           cp site/data/stats.json /tmp/bus-refresh/site/data/stats.json
+          cp logs/collector.log /tmp/bus-refresh/logs/collector.log
           for attempt in 1 2 3 4 5; do
             git fetch origin main
             git reset --hard origin/main
             cp /tmp/bus-refresh/bus.db data/bus.db
             cp /tmp/bus-refresh/site/data/live.json site/data/live.json
             cp /tmp/bus-refresh/site/data/stats.json site/data/stats.json
-            git add data/bus.db site/data
+            cp /tmp/bus-refresh/logs/collector.log logs/collector.log
+            git add data/bus.db site/data logs/collector.log
             if git diff --quiet --cached; then
               git push origin main && exit 0
             elif git commit -m "Refresh bus data" && git push origin main; then
