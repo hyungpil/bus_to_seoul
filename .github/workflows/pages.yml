@@ -8,8 +8,8 @@ on:
       - "requirements.txt"
       - ".github/workflows/pages.yml"
   schedule:
-    # 한국 시간 10~23시에 매시간 한 번 시작하고, 각 실행이 55분간 매분 갱신한다.
-    - cron: "0 1-14 * * *"
+    # 한국 시간 10~23시 사이에 5분마다 한 번 수집하고 즉시 Pages에 배포한다.
+    - cron: "*/5 1-14 * * *"
   workflow_dispatch:
 
 permissions:
@@ -45,48 +45,31 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python -m bus_to_seoul collect
+          python -m bus_to_seoul export-static
+      - name: Commit refreshed data
+        run: |
           mkdir -p /tmp/bus-refresh/site/data /tmp/bus-refresh/logs
-
-          for cycle in $(seq 1 55); do
-            python -m bus_to_seoul collect
-            python -m bus_to_seoul export-static
-
-            cp data/bus.db /tmp/bus-refresh/bus.db
-            cp site/data/live.json /tmp/bus-refresh/site/data/live.json
-            cp site/data/stats.json /tmp/bus-refresh/site/data/stats.json
-            cp logs/collector.log /tmp/bus-refresh/logs/collector.log
-
-            pushed=false
-            for attempt in 1 2 3 4 5; do
-              git fetch origin main
-              git reset --hard origin/main
-              cp /tmp/bus-refresh/bus.db data/bus.db
-              cp /tmp/bus-refresh/site/data/live.json site/data/live.json
-              cp /tmp/bus-refresh/site/data/stats.json site/data/stats.json
-              cp /tmp/bus-refresh/logs/collector.log logs/collector.log
-              git add data/bus.db site/data logs/collector.log
-
-              if git diff --quiet --cached; then
-                if git push origin main; then
-                  pushed=true
-                  break
-                fi
-              elif git commit -m "Refresh bus data" && git push origin main; then
-                pushed=true
-                break
-              fi
-              sleep 5
-            done
-
-            if [ "$pushed" != "true" ]; then
-              echo "데이터 푸시 실패" >&2
-              exit 1
+          cp data/bus.db /tmp/bus-refresh/bus.db
+          cp site/data/live.json /tmp/bus-refresh/site/data/live.json
+          cp site/data/stats.json /tmp/bus-refresh/site/data/stats.json
+          cp logs/collector.log /tmp/bus-refresh/logs/collector.log
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/bus-refresh/bus.db data/bus.db
+            cp /tmp/bus-refresh/site/data/live.json site/data/live.json
+            cp /tmp/bus-refresh/site/data/stats.json site/data/stats.json
+            cp /tmp/bus-refresh/logs/collector.log logs/collector.log
+            git add data/bus.db site/data logs/collector.log
+            if git diff --quiet --cached; then
+              git push origin main && exit 0
+            elif git commit -m "Refresh bus data [skip ci]" && git push origin main; then
+              exit 0
             fi
-
-            if [ "$cycle" -lt 55 ]; then
-              sleep 60
-            fi
+            sleep 5
           done
+          exit 1
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload site artifact
