@@ -71,6 +71,7 @@
 </main>
 <script>
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const stageLabel=stage=>({approaching_a:"접근중",passed_a:"출발",done:"도착",lost:"오류"}[stage]||stage||"-");
 const DATA_BASE="./data";
 let recentRows=[];
 const hourOf=value=>value ? Number(String(value).slice(11,13)) : null;
@@ -93,7 +94,7 @@ function renderRecent(){
   (!destHour||hourOf(r.b_arrival)===Number(destHour))
  );
  document.getElementById("recent").innerHTML=rows.length
-  ? `<table><tr><th>날짜</th><th>요일</th><th>노선</th><th>차량</th><th>광명역</th><th>서울대입구역</th><th>소요(분)</th><th>상태</th></tr>${rows.map(r=>`<tr class="route-${esc(r.route_name)}"><td>${esc(r.service_date)}</td><td>${esc(r.weekday_name)}</td><td><span class="route-pill-${esc(r.route_name)}">${esc(r.route_name)}</span></td><td>${esc(r.plate_no)}</td><td>${esc((r.a_arrival||"").slice(11,16))}</td><td>${esc((r.b_arrival||"").slice(11,16))}</td><td>${esc(r.travel_min??"")}</td><td>${esc(r.stage)}${r.stage==="done"&&!r.accurate?"*":""}</td></tr>`).join("")}</table>`
+  ? `<table><tr><th>날짜</th><th>요일</th><th>노선</th><th>차량</th><th>광명역</th><th>서울대입구역</th><th>소요(분)</th><th>상태</th></tr>${rows.map(r=>`<tr class="route-${esc(r.route_name)}"><td>${esc(r.service_date)}</td><td>${esc(r.weekday_name)}</td><td><span class="route-pill-${esc(r.route_name)}">${esc(r.route_name)}</span></td><td>${esc(r.plate_no)}</td><td>${esc((r.a_arrival||"").slice(11,16))}</td><td>${esc((r.b_arrival||"").slice(11,16))}</td><td>${esc(r.travel_min??"")}</td><td>${esc(stageLabel(r.stage))}${r.stage==="done"&&!r.accurate?"*":""}</td></tr>`).join("")}</table>`
   : `<div class="empty">선택한 조건의 기록이 없습니다.</div>`;
 }
 function prepareRecentFilters(rows){
@@ -107,10 +108,10 @@ function prepareRecentFilters(rows){
 }
 function busHtml(b){
  const dest=b.eta_dest?`서울대입구역2번출구 예상 <b>${esc(b.eta_dest)}</b> <span class="meta">· ${esc(b.eta_dest_basis)}</span>`:`<span class="meta">서울대입구역 예상: 과거 데이터 없음</span>`;
- return `<div class="bus"><div><span class="eta">${esc(b.eta_origin)}</span><span class="min">${esc(b.min_to_origin)}분 후</span></div><div class="meta">${esc(b.plate_no)} · ${esc(b.stops_to_origin)}정거장 전 · 잔여좌석 ${esc(b.seats??"-")} · ${esc(b.congestion??"")}</div><div class="dest">${dest}</div></div>`;
+ return `<div class="bus"><div><span class="eta">${esc(b.eta_origin)}</span><span class="min">${esc(b.min_to_origin)}분 후</span></div><div class="meta">${esc(b.plate_no)} · 접근중 · ${esc(b.stops_to_origin)}정거장 전 · 잔여좌석 ${esc(b.seats??"-")} · ${esc(b.congestion??"")}</div><div class="dest">${dest}</div></div>`;
 }
 function trackHtml(t){
- return `<div class="bus"><div class="meta">${esc(t.plate_no)} · 광명역 ${esc(t.passed_origin)} 통과</div><div class="dest">서울대입구역2번출구 ${t.eta_dest?`<b>${esc(t.eta_dest)}</b> 도착 예정 (${esc(t.source)}${t.stops_to_dest!=null?`, ${esc(t.stops_to_dest)}정거장 전`:""})`:"추적 중"}</div></div>`;
+ return `<div class="bus"><div class="meta">${esc(t.plate_no)} · 출발 · 광명역 ${esc(t.passed_origin)} 통과</div><div class="dest">서울대입구역2번출구 ${t.eta_dest?`<b>${esc(t.eta_dest)}</b> 도착 예정 (${esc(t.source)}${t.stops_to_dest!=null?`, ${esc(t.stops_to_dest)}정거장 전`:""})`:"추적 중"}</div></div>`;
 }
 async function loadLive(){
  try{

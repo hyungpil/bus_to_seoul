@@ -10,8 +10,8 @@ on:
       - "requirements.txt"
       - ".github/workflows/pages.yml"
   schedule:
-    # 16:00~21:00 KST (7:00~12:00 UTC), 5분 간격 갱신
-    - cron: "*/5 7-12 * * *"
+    # GitHub Actions가 24시간 내내 1분 간격으로 단회 수집 및 정적 사이트 갱신
+    - cron: "* * * * *"
   workflow_dispatch:
 
 permissions:
@@ -45,7 +45,7 @@ jobs:
         env:
           BUS_DB: ${{ github.workspace }}/data/bus.db
         run: |
-          python -m bus_to_seoul collect --once
+          python -m bus_to_seoul collect
           python -m bus_to_seoul export-static
       - name: Commit refreshed data
         run: |

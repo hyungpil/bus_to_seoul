@@ -1,4 +1,4 @@
-"""오프라인 시뮬레이션: python -m unittest discover tests"""
+"""오프라인 시뮬레이션: python -m unittest discover test"""
 import sqlite3
 import unittest
 from datetime import datetime, timedelta

@@ -24,12 +24,11 @@ ROUTES = {
     20046644: "6401",
 }
 
-# 수집 시간대 (KST). 이 구간에 광명역 도착을 수집하고,
+# GitHub Actions 수집 시간대 (KST). 이 구간에 광명역 도착을 수집하고,
 # 이미 광명역을 지난 버스는 TRACK_GRACE 동안 서울대입구역까지 계속 추적한다.
-COLLECT_START = time(16, 0)
-COLLECT_END = time(19, 0)
+COLLECT_START = time(10, 0)
+COLLECT_END = time(23, 59, 59, 999999)
 TRACK_GRACE = timedelta(minutes=120)
-POLL_INTERVAL_SEC = 60
 
 # 광명역 통과 후 이 시간 안에 서울대입구역 도착이 확인되지 않으면 lost 처리
 TRIP_TIMEOUT = timedelta(minutes=150)
@@ -45,6 +44,3 @@ ACCURATE_LAST_REMAINING_SEC = 180
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = Path(os.environ.get("BUS_DB") or ROOT / "data" / "bus.db")  # 테스트 시 BUS_DB로 분리
 LOG_DIR = ROOT / "logs"
-
-WEB_HOST = os.environ.get("BUS_HOST", "127.0.0.1")
-WEB_PORT = int(os.environ.get("PORT") or os.environ.get("BUS_PORT", "8507"))

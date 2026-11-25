@@ -1,28 +1,16 @@
-"""16:00~19:00 1분 단위 수집기."""
+"""GitHub Actions에서 실행되는 단회 수집기."""
 from __future__ import annotations
 
 import logging
-import sys
-import time as _time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from . import db
 from .config import (COLLECT_END, COLLECT_START, DEST_STOP_ID, KST, ORIGIN_STOP_ID,
-                     POLL_INTERVAL_SEC, ROUTES, TRACK_GRACE)
+                     ROUTES, TRACK_GRACE)
 from .naver import NaverBusClient
 from .tracker import Tracker
 
 log = logging.getLogger(__name__)
-
-
-def keep_awake(on: bool):
-    """Windows: 수집 중에는 시스템 절전 진입을 막는다 (화면 꺼짐은 허용)."""
-    if sys.platform != "win32":
-        return
-    import ctypes
-    ES_CONTINUOUS, ES_SYSTEM_REQUIRED = 0x80000000, 0x00000001
-    flags = ES_CONTINUOUS | (ES_SYSTEM_REQUIRED if on else 0)
-    ctypes.windll.kernel32.SetThreadExecutionState(flags)
 
 
 def in_window(now: datetime) -> bool:
@@ -60,35 +48,17 @@ def cycle(client: NaverBusClient, tracker: Tracker, now: datetime, force: bool =
     return poll_a or poll_b
 
 
-def run(force: bool = False, once: bool = False, duration_min: int | None = None):
+def run(force: bool = False):
     conn = db.connect()
     tracker = Tracker(conn)
     client = NaverBusClient()
-    started = datetime.now(KST)
-    log.info("수집기 시작 (수집 %s~%s, %ss 간격%s)", COLLECT_START, COLLECT_END, POLL_INTERVAL_SEC,
+    now = datetime.now(KST)
+    log.info("단회 수집 시작 (수집 %s~%s%s)", COLLECT_START, COLLECT_END,
              ", 시간대 무시" if force else "")
-    while True:
-        now = datetime.now(KST)
-        try:
-            active = cycle(client, tracker, now, force=force)
-        except Exception:
-            log.exception("수집 사이클 오류 (다음 분에 재시도)")
-            active = True
-        keep_awake(active)
-        if once:
-            keep_awake(False)
-            return
-        if duration_min and now - started >= timedelta(minutes=duration_min):
-            log.info("지정 시간 %d분 경과, 종료", duration_min)
-            keep_awake(False)
-            return
-        if active:
-            # 다음 정각 분에 맞춰 대기
-            sleep = POLL_INTERVAL_SEC - (datetime.now(KST).timestamp() % POLL_INTERVAL_SEC)
-        else:
-            # 비수집 시간: 다음 수집 시작까지 (최대 10분 단위로 깨어나 확인)
-            nxt = now.replace(hour=COLLECT_START.hour, minute=COLLECT_START.minute, second=0, microsecond=0)
-            if nxt <= now:
-                nxt += timedelta(days=1)
-            sleep = min(600, max(1, (nxt - now).total_seconds()))
-        _time.sleep(sleep)
+    try:
+        cycle(client, tracker, now, force=force)
+    except Exception:
+        log.exception("수집 사이클 오류")
+        raise
+    finally:
+        conn.close()

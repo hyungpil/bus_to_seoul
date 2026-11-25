@@ -10,8 +10,7 @@ from .config import KST
 
 BASE = "https://map.naver.com/p/api/pubtrans"
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                  "(KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+    "User-Agent": "BusToSeoul/1.0",
     "Referer": "https://map.naver.com/",
     "Accept": "application/json",
 }

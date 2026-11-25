@@ -54,6 +54,7 @@ def live_status(client: NaverBusClient, conn: sqlite3.Connection) -> dict:
             hist = historical_travel(conn, rname, eta_a)
             approaching.append({
                 "plate_no": bus.plate_no,
+                "stage": "approaching_a",
                 "eta_origin": eta_a.strftime("%H:%M"),
                 "min_to_origin": round((bus.remaining_sec or 0) / 60),
                 "stops_to_origin": bus.remaining_stop,
@@ -65,7 +66,7 @@ def live_status(client: NaverBusClient, conn: sqlite3.Connection) -> dict:
         tracking = []
         for t in en_route.get(rid, []):
             live = b_by_plate.get(t["plate_no"])
-            item = {"plate_no": t["plate_no"], "passed_origin": t["a_arrival"][11:16]}
+            item = {"plate_no": t["plate_no"], "stage": "passed_a", "passed_origin": t["a_arrival"][11:16]}
             if live:
                 eta_b = rb.reference_time + timedelta(seconds=live.remaining_sec or 0)
                 item.update(eta_dest=eta_b.strftime("%H:%M"), stops_to_dest=live.remaining_stop,

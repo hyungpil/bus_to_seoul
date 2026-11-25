@@ -10,7 +10,7 @@ from .config import DB_PATH, KST, ACCURATE_LAST_REMAINING_SEC
 WEEKDAY_KO = ["월", "화", "수", "목", "금", "토", "일"]
 
 SCHEMA = f"""
--- 1분 단위 원본 관측 (두 정류장 x 두 노선 x 차량)
+-- GitHub Actions 1분 주기 원본 관측 (두 정류장 x 두 노선 x 차량)
 CREATE TABLE IF NOT EXISTS observations (
     id              INTEGER PRIMARY KEY,
     polled_at       TEXT NOT NULL,
